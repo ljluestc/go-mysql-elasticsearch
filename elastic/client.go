@@ -350,6 +350,13 @@ func (c *Client) Get(index string, docType string, id string) (*Response, error)
 	return c.Do("GET", reqURL, nil)
 }
 
+// Reindex sends the reindex request to ES.
+func (c *Client) Reindex(body map[string]interface{}) (*Response, error) {
+	reqURL := fmt.Sprintf("%s://%s/_reindex", c.Protocol, c.Addr)
+
+	return c.Do("POST", reqURL, body)
+}
+
 // Update creates or updates the data
 func (c *Client) Update(index string, docType string, id string, data map[string]interface{}) error {
 	reqURL := fmt.Sprintf("%s://%s/%s/%s/%s", c.Protocol, c.Addr,

@@ -76,7 +76,7 @@ func NewRiver(c *Config) (*River, error) {
 	cfg.HTTPS = r.c.ESHttps
 	r.es = elastic.NewClient(cfg)
 
-	go InitStatus(r.c.StatAddr, r.c.StatPath)
+	go r.RunHTTP(r.c.StatAddr, r.c.StatPath)
 
 	return r, nil
 }
