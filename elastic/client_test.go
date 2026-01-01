@@ -3,6 +3,7 @@ package elastic
 import (
 	"flag"
 	"fmt"
+	"net/http"
 	"testing"
 
 	. "github.com/pingcap/check"
@@ -27,6 +28,12 @@ func (s *elasticTestSuite) SetUpSuite(c *C) {
 	cfg.User = ""
 	cfg.Password = ""
 	s.c = NewClient(cfg)
+
+	// Check if elasticsearch is available
+	resp, err := http.Head(fmt.Sprintf("http://%s", cfg.Addr))
+	if err != nil || resp.StatusCode != http.StatusOK {
+		c.Skip("Elasticsearch not available")
+	}
 }
 
 func (s *elasticTestSuite) TearDownSuite(c *C) {

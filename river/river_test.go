@@ -3,6 +3,7 @@ package river
 import (
 	"flag"
 	"fmt"
+	"net/http"
 	"os"
 	"testing"
 	"time"
@@ -32,7 +33,17 @@ var _ = Suite(&riverTestSuite{})
 func (s *riverTestSuite) SetUpSuite(c *C) {
 	var err error
 	s.c, err = client.Connect(*myAddr, "root", "", "test")
-	c.Assert(err, IsNil)
+	if err != nil {
+		c.Skip(fmt.Sprintf("MySQL not available: %v", err))
+		return
+	}
+
+	// Check if elasticsearch is available
+	resp, err := http.Head(fmt.Sprintf("http://%s", *esAddr))
+	if err != nil || resp.StatusCode != http.StatusOK {
+		c.Skip("Elasticsearch not available")
+		return
+	}
 
 	s.testExecute(c, "SET SESSION binlog_format = 'ROW'")
 
