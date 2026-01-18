@@ -53,8 +53,16 @@ func loadMasterInfo(dataDir string) (*masterInfo, error) {
 func (m *masterInfo) Save(pos mysql.Position) error {
 	log.Infof("save position %s", pos)
 
+	if len(pos.Name) == 0 {
+		return nil
+	}
+
 	m.Lock()
 	defer m.Unlock()
+
+	if len(pos.Name) == 0 {
+		return nil
+	}
 
 	m.Name = pos.Name
 	m.Pos = pos.Pos
