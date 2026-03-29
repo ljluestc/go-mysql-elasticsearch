@@ -443,6 +443,11 @@ func (r *River) getDocID(rule *Rule, row []interface{}) (string, error) {
 
 	var buf bytes.Buffer
 
+	if rule.IDWithTablePrefix {
+		buf.WriteString(rule.Table)
+		buf.WriteString(":")
+	}
+
 	sep := ""
 	for i, value := range ids {
 		if value == nil {

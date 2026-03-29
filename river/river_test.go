@@ -11,6 +11,7 @@ import (
 	"github.com/siddontang/go-mysql-elasticsearch/elastic"
 	"github.com/siddontang/go-mysql/client"
 	"github.com/siddontang/go-mysql/mysql"
+	"github.com/siddontang/go-mysql/schema"
 )
 
 var myAddr = flag.String("my_addr", "127.0.0.1:3306", "MySQL addr")
@@ -431,5 +432,116 @@ func TestBuildTable(t *testing.T) {
 		if buildTable(table.Table) != table.Expect {
 			t.Errorf("Table: %s, Expected: is \"%s\", but: was \"%s\"", table.Table, table.Expect, buildTable(table.Table))
 		}
+	}
+}
+
+func TestGetDocIDWithTablePrefix(t *testing.T) {
+	r := &River{}
+
+	// Build a minimal schema.Table with one PK column
+	tableInfo := &schema.Table{
+		Schema:    "test",
+		Name:      "order_0001",
+		Columns:   []schema.TableColumn{{Name: "id", Type: schema.TYPE_NUMBER}},
+		PKColumns: []int{0},
+	}
+
+	// Without table prefix — default behavior
+	rule := &Rule{
+		Schema:            "test",
+		Table:             "order_0001",
+		Index:             "orders",
+		IDWithTablePrefix: false,
+		TableInfo:         tableInfo,
+	}
+
+	id, err := r.getDocID(rule, []interface{}{int64(42)})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if id != "42" {
+		t.Errorf("expected doc ID \"42\", got \"%s\"", id)
+	}
+
+	// With table prefix enabled
+	rule.IDWithTablePrefix = true
+	id, err = r.getDocID(rule, []interface{}{int64(42)})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if id != "order_0001:42" {
+		t.Errorf("expected doc ID \"order_0001:42\", got \"%s\"", id)
+	}
+
+	// With table prefix and composite PK
+	tableInfo2 := &schema.Table{
+		Schema:    "test",
+		Name:      "order_0002",
+		Columns:   []schema.TableColumn{{Name: "id", Type: schema.TYPE_NUMBER}, {Name: "region", Type: schema.TYPE_STRING}},
+		PKColumns: []int{0, 1},
+	}
+	rule2 := &Rule{
+		Schema:            "test",
+		Table:             "order_0002",
+		Index:             "orders",
+		IDWithTablePrefix: true,
+		TableInfo:         tableInfo2,
+	}
+	id, err = r.getDocID(rule2, []interface{}{int64(1), "us-west"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if id != "order_0002:1:us-west" {
+		t.Errorf("expected doc ID \"order_0002:1:us-west\", got \"%s\"", id)
+	}
+
+	// With table prefix and custom ID columns
+	rule3 := &Rule{
+		Schema:            "test",
+		Table:             "order_0003",
+		Index:             "orders",
+		ID:                []string{"id"},
+		IDWithTablePrefix: true,
+		TableInfo:         tableInfo,
+	}
+	id, err = r.getDocID(rule3, []interface{}{int64(99)})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if id != "order_0003:99" {
+		t.Errorf("expected doc ID \"order_0003:99\", got \"%s\"", id)
+	}
+}
+
+func TestConfigWithTablePrefix(t *testing.T) {
+	str := `
+my_addr = "127.0.0.1:3306"
+my_user = "root"
+my_pass = ""
+my_charset = "utf8"
+es_addr = "127.0.0.1:9200"
+data_dir = "./var"
+
+[[source]]
+schema = "test"
+tables = ["order_[0-9]{4}"]
+
+[[rule]]
+schema = "test"
+table = "order_[0-9]{4}"
+index = "orders"
+type = "order"
+id_with_table_prefix = true
+`
+
+	cfg, err := NewConfig(str)
+	if err != nil {
+		t.Fatalf("parse config error: %v", err)
+	}
+	if len(cfg.Rules) != 1 {
+		t.Fatalf("expected 1 rule, got %d", len(cfg.Rules))
+	}
+	if !cfg.Rules[0].IDWithTablePrefix {
+		t.Error("expected IDWithTablePrefix to be true")
 	}
 }

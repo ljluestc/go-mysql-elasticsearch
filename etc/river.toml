@@ -147,3 +147,8 @@ type = "t"
 # The es doc's id will be `id`:`tag`
 # It is useful for merge muliple table into one type while theses tables have same PK 
 id = ["id", "tag"]
+
+# If multiple sub-tables are merged into one ES index and their PKs may collide,
+# set id_with_table_prefix = true to prepend the table name to the doc ID.
+# e.g., table "tid_0001" with id=1 becomes ES doc ID "tid_0001:1"
+# id_with_table_prefix = true

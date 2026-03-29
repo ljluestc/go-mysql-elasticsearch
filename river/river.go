@@ -249,6 +249,7 @@ func (r *River) prepareRule() error {
 					rr.Parent = rule.Parent
 					rr.ID = rule.ID
 					rr.FieldMapping = rule.FieldMapping
+					rr.IDWithTablePrefix = rule.IDWithTablePrefix
 				}
 			} else {
 				key := ruleKey(rule.Schema, rule.Table)
